@@ -27,7 +27,7 @@ Locate the configuration file: appsettings.json
 Update the connection string:
 
 "ConnectionStrings": {
-  "DefaultConnection": "Server=your-server-name;Database=your-db-name;User Id=your-username;Password=your-password;TrustServerCertificate=true;"
+  "DefaultConnection": "Server=your-server-name;Database=EMSDB;User Id=your-username;Password=your-password;TrustServerCertificate=true;"
 }
 
 ## 3. Apply Database Migrations
