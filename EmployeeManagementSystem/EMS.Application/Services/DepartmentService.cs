@@ -1,6 +1,7 @@
 ﻿using EMS.Application.Interfaces;
 using EMS.Domain.Entities;
 using EMS.Infrastructure.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace EMS.Application.Services;
@@ -44,31 +45,46 @@ public class DepartmentService : IDepartmentService
 
     public async Task UpdateDepartmentAsync(Department department)
     {
-        var existingDepartment = await _unitOfWork.Departments.GetByIdAsync(department.Id);
+        try
+        {
+            var existingDepartment = await _unitOfWork.Departments.GetByIdAsync(department.Id);
 
-        if (existingDepartment == null)
-            throw new KeyNotFoundException("Department not found");
+            if (existingDepartment == null)
+                throw new KeyNotFoundException("Department not found");
 
-        existingDepartment.Name = department.Name;
+            existingDepartment.Name = department.Name;
 
-        _unitOfWork.Departments.Update(existingDepartment);
-        await _unitOfWork.CompleteAsync();
+            _unitOfWork.Departments.Update(existingDepartment);
+            await _unitOfWork.CompleteAsync();
+        }
+        catch (Exception ex)
+        {
+
+            throw new("Error: " + ex);
+        }
     }
 
     public async Task DeleteDepartmentAsync(int id)
     {
-        var department = await _unitOfWork.Departments.GetByIdAsync(id);
+        try
+        {
+            var department = await _unitOfWork.Departments.GetByIdAsync(id);
 
-        if (department == null)
-            throw new KeyNotFoundException("Department not found");
+            if (department == null)
+                throw new KeyNotFoundException("Department not found");
 
-        var hasEmployees = (await _unitOfWork.Employees.FindAsync(e => e.DepartmentId == id)).Any();
+            var hasEmployees = (await _unitOfWork.Employees.FindAsync(e => e.DepartmentId == id)).Any();
 
-        if (hasEmployees)
-            throw new InvalidOperationException("You cannot delete a department with employees");
+            if (hasEmployees)
+                throw new InvalidOperationException("You cannot delete a department with employees");
 
-        _unitOfWork.Departments.Remove(department);
-        await _unitOfWork.CompleteAsync();
+            _unitOfWork.Departments.Remove(department);
+            await _unitOfWork.CompleteAsync();
+        }
+        catch (Exception ex)
+        {
+            throw new("Error: " + ex);
+        }
     }
-
 }
+

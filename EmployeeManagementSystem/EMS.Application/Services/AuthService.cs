@@ -1,4 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security;
+using System.Security.Authentication;
 using System.Security.Claims;
 using System.Text;
 using EMS.Application.Interfaces;
@@ -23,31 +25,43 @@ public class AuthService : IAuthService
 
     public async Task<string> AuthenticateAsync(string username, string password)
     {
-        var user = _users.SingleOrDefault(u => u.Username == username && u.PasswordHash == password);
-
-        if (user == null) return null;
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["JwtSettings:SecretKey"]);
-
-        var tokenDescriptor = new SecurityTokenDescriptor
+        try
         {
-            Subject = new ClaimsIdentity(new[]
+            var user = _users.SingleOrDefault(u => u.Username == username && u.PasswordHash == password);
+
+            if (user == null)
+                throw new AuthenticationException("Invalid username or password");
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["JwtSettings:SecretKey"]);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
+                Subject = new ClaimsIdentity(new[]
+                {
                 new Claim(ClaimTypes.Name, user.Id.ToString()),
                 new Claim(ClaimTypes.Role, user.Role)
             }),
-            Expires = DateTime.UtcNow.AddMinutes(
-                double.Parse(_configuration["JwtSettings:ExpiryInMinutes"]!)),
-            Issuer = _configuration["JwtSettings:Issuer"],
-            Audience = _configuration["JwtSettings:Audience"],
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
+                Expires = DateTime.UtcNow.AddMinutes(
+                    double.Parse(_configuration["JwtSettings:ExpiryInMinutes"]!)),
+                Issuer = _configuration["JwtSettings:Issuer"],
+                Audience = _configuration["JwtSettings:Audience"],
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+        catch (SecurityTokenException ex)
+        {
+            throw new SecurityException("Token generation failed", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ApplicationException("Authentication process error", ex);
+        }
     }
 
     public Task<User?> GetUserByIdAsync(int id)
